@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4">
+<head th:replace="layout :: head"/>
+<body>
+<nav th:replace="layout :: navbar"/>
+
+<div class="container genericContainer">
+    <input id="pac-input" class="form-control" type="text" placeholder="Search Box" style="margin-top: 9px"/>
+    <div id="map"/>
+</div>
+
+<div th:replace="layout :: bottom"/>
+
+<script th:inline="javascript">
+//<![CDATA[
+    var map;
+    var infowindow;
+
+      function initMap() {
+        var pyrmont = {lat: -33.867, lng: 151.195};
+
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: pyrmont,
+          zoom: 15
+        });
+        console.log("first step");
+        infowindow = new google.maps.InfoWindow();
+        var service = new google.maps.places.PlacesService(map);
+        service.nearbySearch({
+          location: pyrmont,
+          radius: 800,
+          type: ['gym'],
+          keyword: 'weights'
+        }, callback);
+      }
+
+      function callback(results, status) {
+        if (status === google.maps.places.PlacesServiceStatus.OK) {
+        console.log("about to create marker");
+          for (var i = 0; i < results.length; i++) {
+          console.log(results.length)
+            createMarker(results[i]);
+          }
+        }
+      }
+
+      function createMarker(place) {
+      console.log(place.name);
+        var placeLoc = place.geometry.location;
+        var marker = new google.maps.Marker({
+          map: map,
+          position: place.geometry.location
+        });
+console.log("creating marker");
+        google.maps.event.addListener(marker, 'click', function() {
+          infowindow.setContent(place.name);
+          infowindow.open(map, this);
+        });
+      }
+//]]>
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBKztdM5kKZJHamNqfMNS6YcgQHMCSCCr0&amp;callback=initMap&amp;libraries=places"/>
+<style>
+    #map {
+        height: 600px;
+        width: 100%;
+    }
+    #pac-input {
+        background-color: #fff;
+        font-family: Roboto;
+        font-size: 15px;
+        font-weight: 300;
+        margin-left: 12px;
+        padding: 0 11px 0 13px;
+        text-overflow: ellipsis;
+        width: 300px;
+    }
+    .gm-style-iw + div {
+        display: none;
+    }
+
+</style>
+</body>
+
+</html>

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4">
+<head th:replace="layout :: head"/>
+<body>
+<nav th:replace="layout :: navbar"/>
+
+<!--@thymesVar id="cluster" type="rook.domain.Cluster"-->
+<!--@thymesVar id="isNewCluster" type="java.lang.Boolean"-->
+<div class="container genericContainer">
+    <div class="page-header">
+        <h1 th:if="${isNewCluster}">New Cluster</h1>
+        <h1 th:unless="${isNewCluster}">Cluster Details: <span th:text="${cluster.name}"/></h1>
+    </div>
+
+    <!--<span th:each="coordinate : ${cluster.coordinateList}" th:text="${'(' + coordinate.lng + ',' + coordinate.lat + ')'}"/>-->
+    <!--<span th:text="${cluster.coordinateListInJson}"/>-->
+    <!--<span th:text="${cluster.siteListInJson}"/>-->
+    <div class="row">
+        <div class="col-xs-12" th:classappend="${cluster.siteList.isEmpty() ? 'col-md-12' : 'col-md-8'}">
+            <input id="pac-input" class="form-control" type="text" placeholder="Search Box" style="margin-top: 9px"/>
+            <div id="map"/>
+        </div>
+        <div class="col-xs-12 col-md-4" th:unless="${cluster.siteList.isEmpty()}">
+            <table class="table table-condensed">
+                <thead>
+                <tr>
+                    <th>Site ID</th>
+                    <th>Site</th>
+                    <th>Candidates</th>
+                    <th/>
+                </tr>
+                </thead>
+                <th:block th:each="site : ${cluster.siteList}">
+                    <tr class="siteRow" th:attr="data-site-id=${site.id}">
+                        <td th:text="${site.id}"/>
+                        <td>
+                            <span th:text="${site.name}" style="margin-left: 5px"/>
+                        </td>
+                        <td th:text="${site.candidateList.size()}"/>
+                        <td>
+                            <button class="btn btn-xs btn-default" th:onclick="'zoomIntoSite(' + ${site.id} +')'">
+                                <i class="fa fa-location-arrow" aria-hidden="true"/>
+                            </button>
+                            <button class="btn btn-xs btn-default accordion-toggle" data-toggle="collapse"
+                                    th:attr="data-target='#site' + ${site.id}" th:disabled="${site.candidateList.isEmpty()}">
+                                <i class="fa fa-caret-down" aria-hidden="true"/>
+                            </button>
+                            <button class="btn btn-xs btn-default" th:onclick="'deleteSite(' + ${site.id} +')'" style="margin-left: 10px">
+                                <i class="fa fa-trash-o" aria-hidden="true"/>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" style="padding: 0; border-width: 0px">
+                            <div class="collapse" th:id="'site' + ${site.id}" style="padding-left: 10px">
+                                <table class="table table-condensed table-bordered" style="background: #f7f7f7">
+                                    <thead>
+                                    <tr>
+                                        <th>Candidate ID</th>
+                                        <th>Candidate Name</th>
+                                        <th/>
+                                    </tr>
+                                    </thead>
+                                    <tr th:each="candidate : ${site.candidateList}" class="candidateRow" th:attr="data-candidate-id=${candidate.id}">
+                                        <td th:text="${candidate.id}"/>
+                                        <td>
+                                            <span th:text="${candidate.name}"/>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-default btn-xs" th:onclick="'openEditCandidatePopup(' + ${candidate.id} + ');'">
+                                                <i class="fa fa-pencil-square-o" aria-hidden="true"/>
+                                            </button>
+                                            <!--<button class="btn btn-default btn-xs">-->
+                                                <!--<i class="fa fa-trash-o" aria-hidden="true"/>-->
+                                            <!--</button>-->
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                </th:block>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<div th:replace="layout :: bottom"/>
+<script th:inline="javascript">
+
+    var boundaryJsonString = /*[[${cluster.coordinateListInJson}]]*/'';
+    var boundary = $.parseJSON(boundaryJsonString);
+    var siteListJsonString = /*[[${cluster.siteListInJson}]]*/'';
+    var siteList = $.parseJSON(siteListJsonString);
+    var candidateListJsonString = /*[[${cluster.candidateListInJson}]]*/'';
+    var candidateList = $.parseJSON(candidateListJsonString);
+    var isNewCluster = /*[[${isNewCluster}]]*/'';
+    var stateId = /*[[${stateId}]]*/'';
+    var clusterId = /*[[${cluster.id}]]*/'';
+
+    r map;va
+    var sitePolygonList = [];
+    var candidateMarkerList = [];
+
+    var markerIcon;
+    var hoverMarkerIcon;
+    var markerInfoWindow;
+    var polygonInfoWindow;
+
+    function addGetBoundFunctionForPolygon() {
+        /*<![CDATA[*/
+        google.maps.Polygon.prototype.getBounds = function () {
+            var bounds = new google.maps.LatLngBounds();
+            var paths = this.getPaths();
+            var path;
+            for (var i = 0; i < paths.getLength(); i++) {
+                path = paths.getAt(i);
+                for (var ii = 0; ii < path.getLength(); ii++) {
+                    bounds.extend(path.getAt(ii));
+                }
+            }
+            return bounds;
+        }
+        /*]]>*/
+    }
+
+    function initMap() {
+
+        addGetBoundFunctionForPolygon();
+
+        var currentPolygon;
+        var currentMarker;
+
+        var uluru = {lat: -25.363, lng: 131.044};
+        map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 4,
+            center: uluru
+        });
+
+        var input = document.getElementById('pac-input');
+
+        var searchBox = new google.maps.places.SearchBox(input);
+        searchBox.addListener('places_changed', function() {
+            var places = searchBox.getPlaces();
+            var bounds = new google.maps.LatLngBounds();
+            bounds.union(places[0].geometry.viewport);
+            map.fitBounds(bounds);
+        });
+
+        map.controls[google.maps.ControlPosition.TOP_CENTER].push(input);
+
+        var drawingManager = new google.maps.drawing.DrawingManager();
+        drawingManager.setMap(map);
+
+        drawingManager.setOptions({
+            drawingControlOptions: {
+                position: google.maps.ControlPosition.TOP_RIGHT,
+                drawingModes: [ (isNewCluster ? '' : 'marker'), 'polygon']
+            }
+        });
+
+        google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
+            clearMap();
+            var data = mapCoordinates(polygon.getPath().b);
+            openPopupByPost(isNewCluster ? 'New Cluster' : 'New Site', contextPath + 'Clusters/add/' + (isNewCluster ? 'cluster/' : 'site/') + stateId + (clusterId != null ? '/' + clusterId : ''), data, null, 'saveClusterSiteForm');
+            currentPolygon = polygon;
+        });
+
+        google.maps.event.addListener(drawingManager, 'markercomplete', function(marker) {
+            clearMap();
+            var data = mapCoordinate(marker.getPosition());
+            openPopupByPost('New Candidate', contextPath + 'Clusters/' + stateId + '/' + clusterId + '/addCandidate', data, 'large', 'saveCandidateForm');
+            currentMarker = marker;
+        });
+
+        function clearMap() {
+            if (typeof currentPolygon != 'undefined') {
+                currentPolygon.setMap(null);
+            }
+            if (typeof currentMarker != 'undefined') {
+                currentMarker.setMap(null);
+            }
+        }
+
+        markerInfoWindow = new google.maps.InfoWindow({
+            disableAutoPan: true,
+            zIndex: 1000
+        });
+        polygonInfoWindow = new google.maps.InfoWindow({
+            disableAutoPan: true
+        });
+
+        markerIcon = {
+            path: google.maps.SymbolPath.CIRCLE,
+            fillColor: 'red',
+            scale: 10,
+            fillOpacity: 1,
+            strokeColor: 'black',
+            strokeWeight:2
+        };
+
+        hoverMarkerIcon = {
+            path: google.maps.SymbolPath.CIRCLE,
+            fillColor: 'red',
+            scale: 10,
+            fillOpacity: 1,
+            strokeColor: 'black',
+            strokeWeight: 4
+        };
+
+        for (var candidate in candidateList) {
+
+            var marker = new google.maps.Marker({
+                id: candidateList[candidate].id,
+                name: candidateList[candidate].name
+            });
+
+            marker.setPosition({
+                lat: candidateList[candidate].latitude,
+                lng: candidateList[candidate].longitude
+            });
+            marker.setMap(map);
+            marker.setIcon(markerIcon);
+
+            marker.addListener('click', function() {
+                openEditCandidatePopup(this.id);
+            });
+            marker.addListener('mouseover', function () {
+                this.setIcon(hoverMarkerIcon);
+                $('tr[data-candidate-id=' + this.id + ']').addClass('info');
+                markerInfoWindow.setContent(this.id + ' ' + this.name);
+                markerInfoWindow.open(map, this);
+            });
+            marker.addListener('mouseout', function () {
+                this.setIcon(markerIcon);
+                $('tr[data-candidate-id=' + this.id + ']').removeClass('info');
+                markerInfoWindow.close();
+            });
+
+            candidateMarkerList.push(marker);
+        }
+
+        var clusterBoundary = new google.maps.Polygon({
+            paths: boundary,
+            strokeColor: '#FF0000',
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: '#FF0000',
+            fillOpacity: 0.05,
+        });
+
+        for (site in siteList) {
+            var sitePolygon = new google.maps.Polygon({
+                id: siteList[site].id,
+                paths: siteList[site].coordinateList,
+                strokeColor: 'blue',
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: 'blue',
+                fillOpacity: 0.05,
+            });
+            sitePolygon.setMap(map);
+            sitePolygonList.push(sitePolygon);
+            sitePolygon.addListener('mouseover', function () {
+                this.setOptions({
+                    strokeWeight: 4
+                });
+                $('tr[data-site-id=' + this.id + ']').addClass('info');
+                polygonInfoWindow.setContent(this.id + ' ' + this.name);
+                polygonInfoWindow.setPosition(this.getPath().b[0]);
+                polygonInfoWindow.open(map);
+            });
+            sitePolygon.addListener('mouseout', function () {
+                this.setOptions({
+                    strokeWeight: 2
+                });
+                $('tr[data-site-id=' + this.id + ']').removeClass('info')
+                polygonInfoWindow.close();
+            });
+        }
+
+        if (boundary.length > 0) {
+            map.fitBounds(clusterBoundary.getBounds());
+        }
+        clusterBoundary.setMap(map);
+
+    }
+
+    function mapCoordinates(coordinates) {
+        var result = [];
+        coordinates.forEach(function (coordinate) {
+            result.push(mapCoordinate(coordinate));
+        });
+        return result;
+    }
+
+    function mapCoordinate(coordinate) {
+        return {
+            lat: coordinate.lat(),
+            lng: coordinate.lng()
+        }
+    }
+
+    function zoomIntoSite(siteId) {
+        var clickedSite = findSiteById(siteId);
+        map.fitBounds(clickedSite.getBounds());
+    }
+
+    function findSiteById(siteId) {
+        for (sitePolygon in sitePolygonList) {
+            if (siteId == sitePolygonList[sitePolygon].id) {
+                return sitePolygonList[sitePolygon];
+            }
+        }
+    }
+
+    function findCandidateById(candidateId) {
+        for (candidate in candidateMarkerList) {
+            if (candidateId == candidateMarkerList[candidate].id) {
+                return candidateMarkerList[candidate];
+            }
+        }
+    }
+
+    function deleteSite(siteId) {
+        bootbox.confirm('Would you like to delete site ' + siteId + '?', function(confirmed) {
+            if (confirmed) {
+                $.get(clusterId + '/deleteSite/' + siteId, function(response) {
+                    window.location = '';
+                })
+            }
+        })
+    }
+
+    $('.siteRow').on('mouseenter', function () {
+        var site = findSiteById($(this).attr('data-site-id'));
+        site.setOptions({
+            strokeWeight: 4
+        });
+        $(this).addClass('info');
+        polygonInfoWindow.setContent(site.id + ' ' + site.name);
+        polygonInfoWindow.setPosition(site.getPath().b[0]);
+        polygonInfoWindow.open(map);
+    });
+
+    $('.siteRow').on('mouseleave', function () {
+        var site = findSiteById($(this).attr('data-site-id'));
+        site.setOptions({
+            strokeWeight: 2
+        });
+        $(this).removeClass('info');
+        polygonInfoWindow.close();
+    });
+
+    $('.candidateRow').on('mouseenter', function() {
+        $(this).addClass('info');
+        var candidate = findCandidateById($(this).attr('data-candidate-id'));
+        candidate.setIcon(hoverMarkerIcon);
+        markerInfoWindow.setContent(candidate.id + ' ' + candidate.name);
+        markerInfoWindow.open(map, candidate);
+    });
+
+    $('.candidateRow').on('mouseleave', function() {
+        $(this).removeClass('info');
+        var candidate = findCandidateById($(this).attr('data-candidate-id'));
+        candidate.setIcon(markerIcon);
+        markerInfoWindow.close();
+    });
+
+    function openEditCandidatePopup(candidateId) {
+        openPopupByPost('Edit Candidate', contextPath + 'Clusters/' + stateId + '/' + clusterId + '/editCandidate/' + candidateId, null, 'large', 'saveCandidateForm');
+    }
+
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBKztdM5kKZJHamNqfMNS6YcgQHMCSCCr0&amp;callback=initMap&amp;libraries=drawing,places"/>
+<style>
+    #map {
+        height: 600px;
+        width: 100%;
+    }
+    #pac-input {
+        background-color: #fff;
+        font-family: Roboto;
+        font-size: 15px;
+        font-weight: 300;
+        margin-left: 12px;
+        padding: 0 11px 0 13px;
+        text-overflow: ellipsis;
+        width: 300px;
+    }
+    .gm-style-iw + div {
+        display: none;
+    }
+
+</style>
+</body>
+</html>
