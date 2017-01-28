@@ -70,16 +70,36 @@
             var request = { reference: place.reference };
             service.getDetails(request, function(details, status) {
               infowindow.setContent(
-              '<div>'+details.name+'</div>'+
-              '<div>'+details.formatted_address+'</div>'+
-              '<div>'+details.formatted_phone_number+'</div>'+
-              '<div>'+details.icon+'</div>'+
-              '<div>'+details.opening_hours+'</div>'+
-              '<div>'+details.rating+'</div>'+
+              '<div>Company Name: '+details.name+'</div>'+
+              '<div>Address: '+details.formatted_address+'</div>'+
+              '<div>Phone: '+details.formatted_phone_number+'</div>'+
+              '<div><img src="'+details.icon+'"/></div>'+
+              '<div>Hours:</div>'+printOpeningHours(details.opening_hours)+
+              '<div>Rating: '+checkIfUndefined(details.rating)+'</div>'+
               '<div>'+details.reviews+'</div>');
               infowindow.open(map, marker);
             });
         });
+      }
+
+      function printOpeningHours(openingHours) {
+          if (undefined != openingHours && undefined != openingHours.weekday_text) {
+            return '<div>'+openingHours.weekday_text[0]+'</div>'+
+              '<div>'+openingHours.weekday_text[1]+'</div>'+
+              '<div>'+openingHours.weekday_text[2]+'</div>'+
+              '<div>'+openingHours.weekday_text[3]+'</div>'+
+              '<div>'+openingHours.weekday_text[4]+'</div>'+
+              '<div>'+openingHours.weekday_text[5]+'</div>'+
+              '<div>'+openingHours.weekday_text[6]+'</div>';
+          } else {
+              return "";
+          }
+      }
+
+      function checkIfUndefined(value) {
+        if (undefined != value) {
+            return value;
+        }
       }
 
       function setMapOnAll(map) {
