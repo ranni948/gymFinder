@@ -14,9 +14,11 @@ function initMap() {
     var input = document.getElementById('pac-input');
     var autocomplete = new google.maps.places.Autocomplete(input);
     autocomplete.bindTo('bounds', map);
+    map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
 //
-//    var autocomplete = new google.maps.places.Autocomplete(input);
-//    autocomplete.bindTo('bounds', map);
+    infowindow = new google.maps.InfoWindow();
+    service = new google.maps.places.PlacesService(map);
+    setNearbySearch(pyrmont, service);
 //
     autocomplete.addListener('place_changed', function() {
       var place = autocomplete.getPlace();
@@ -30,34 +32,36 @@ function initMap() {
               map.fitBounds(place.geometry.viewport);
             } else {
               map.setCenter(place.geometry.location);
-              map.setZoom(17);  // Why 17? Because it looks good.
+              map.setZoom(15);  // Why 17? Because it looks good.
             }
 
-      // Clear out the old markers.
-      // For each place, get the icon, name and location.
       setNearbySearch(map.getCenter());
     });
-
-    console.log("first step");
-    infowindow = new google.maps.InfoWindow();
-    service = new google.maps.places.PlacesService(map);
-    setNearbySearch(pyrmont, service);
 
     map.addListener('dragend', function() {
         setNearbySearch(map.getCenter());
     });
+
+    map.addListener('zoom_changed', function() {
+        var zoom = map.getZoom();
+        if (zoom < 11) {
+            deleteMarkers();
+        } else {
+            setNearbySearch(map.getCenter());
+        }
+    });
 }
 
 function setNearbySearch(latlng) {
-  deleteMarkers();
+  deleteMarkersOutOfViewport();
   service.nearbySearch({
       location: latlng,
-      radius: 800,
+      radius: 1500,
       type: ['gym'],
     }, callback);
 }
 
-function callback(results, status) {
+function callback(results, status, pagination) {
     if (status === google.maps.places.PlacesServiceStatus.OK) {
       var numberOfGymsInVicinity = 0;
       for (var i = 0; i < results.length; i++) {
@@ -65,6 +69,9 @@ function callback(results, status) {
         createMarker(results[i]);
       }
       console.log(numberOfGymsInVicinity)
+      if (pagination.hasNextPage) {
+          pagination.nextPage();
+      }
     }
 }
 
@@ -73,11 +80,12 @@ function createMarker(place) {
     var placeLoc = place.geometry.location;
     var marker = new google.maps.Marker({
       map: map,
-      position: place.geometry.location
+      position: place.geometry.location,
+      optimized: false
     });
     markers.push(marker);
 
-    google.maps.event.addListener(marker, 'click', function() {
+    google.maps.event.addListener(marker, 'mousedown', function() {
         var request = { reference: place.reference };
         service.getDetails(request, function(details, status) {
           infowindow.setContent(
@@ -122,6 +130,16 @@ function setMapOnAll(map) {
 function deleteMarkers() {
     clearMarkers();
     markers = [];
+}
+
+function deleteMarkersOutOfViewport() {
+    console.log(markers.length);
+    for (var i = 0; i < markers.length; i++) {
+        if (!map.getBounds().contains(markers[i].getPosition())) {
+            markers[i].setMap(null);
+        }
+    }
+    console.log(markers.length);
 }
 
 function clearMarkers() {

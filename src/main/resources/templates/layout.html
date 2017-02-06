@@ -3,7 +3,7 @@
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4">
 <head th:fragment="head">
-    <title>Rook</title>
+    <title>Gym Finder</title>
     <link th:href="@{//maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css}" rel="stylesheet"/>
     <link th:href="@{//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css}" rel="stylesheet"/>
     <link th:href="@{/resources/css/global.css}" rel="stylesheet"/>
@@ -14,62 +14,62 @@
 
 <!--@thymesVar id="stateList" type="java.util.List<rook.domain.State>"-->
 
-<nav th:fragment="navbar" class="navbar navbar-inverse navbar-fixed-top" style="margin-bottom: 20px">
-    <div class="container">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar" aria-expanded="true" aria-controls="navbar">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" th:href="@{/Main}">Rook</a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse in" aria-expanded="true">
-            <ul class="nav navbar-nav">
+<!--<nav th:fragment="navbar" class="navbar navbar-inverse navbar-fixed-top" style="margin-bottom: 20px">-->
+    <!--<div class="container">-->
+        <!--<div class="navbar-header">-->
+            <!--<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar" aria-expanded="true" aria-controls="navbar">-->
+                <!--<span class="sr-only">Toggle navigation</span>-->
+                <!--<span class="icon-bar"></span>-->
+                <!--<span class="icon-bar"></span>-->
+                <!--<span class="icon-bar"></span>-->
+            <!--</button>-->
+            <!--<a class="navbar-brand" th:href="@{/Main}">Rook</a>-->
+        <!--</div>-->
+        <!--<div id="navbar" class="navbar-collapse collapse in" aria-expanded="true">-->
+            <!--<ul class="nav navbar-nav">-->
 
-                <li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">Clusters <b class="caret"></b></a>
-                    <ul class="dropdown-menu">
-                        <li class="dropdown dropdown-submenu" th:each="state : ${stateList}">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" th:text="${state.stateName}"></a>
-                            <ul class="dropdown-menu">
-                                <li th:each="cluster : ${state.clusterList}">
-                                    <a th:href="@{/Clusters/} + ${state.id} + '/' + ${cluster.id}" th:text="${cluster.name}"/>
-                                </li>
-                                <li class="divider" th:unless="${state.clusterList.isEmpty()}"/>
-                                <li>
-                                    <a th:href="@{/Clusters/new/} + ${state.id}">
-                                        <i class="fa fa-plus" aria-hidden="true"/>
-                                        <span>Add New..</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
+                <!--<li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">Clusters <b class="caret"></b></a>-->
+                    <!--<ul class="dropdown-menu">-->
+                        <!--<li class="dropdown dropdown-submenu" th:each="state : ${stateList}">-->
+                            <!--<a href="#" class="dropdown-toggle" data-toggle="dropdown" th:text="${state.stateName}"></a>-->
+                            <!--<ul class="dropdown-menu">-->
+                                <!--<li th:each="cluster : ${state.clusterList}">-->
+                                    <!--<a th:href="@{/Clusters/} + ${state.id} + '/' + ${cluster.id}" th:text="${cluster.name}"/>-->
+                                <!--</li>-->
+                                <!--<li class="divider" th:unless="${state.clusterList.isEmpty()}"/>-->
+                                <!--<li>-->
+                                    <!--<a th:href="@{/Clusters/new/} + ${state.id}">-->
+                                        <!--<i class="fa fa-plus" aria-hidden="true"/>-->
+                                        <!--<span>Add New..</span>-->
+                                    <!--</a>-->
+                                <!--</li>-->
+                            <!--</ul>-->
+                        <!--</li>-->
+                    <!--</ul>-->
+                <!--</li>-->
 
 
-                <li>
-                    <a th:href="@{/Sites}">Sites</a>
-                </li>
+                <!--<li>-->
+                    <!--<a th:href="@{/Sites}">Sites</a>-->
+                <!--</li>-->
 
-                <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
-                        Dashboard <span class="caret"></span>
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a th:href="@{/Dashboard/tables}">Tables</a></li>
-                        <li><a th:href="@{/Dashboard/charts}">Charts</a></li>
-                    </ul>
-                </li>
+                <!--<li class="dropdown">-->
+                    <!--<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">-->
+                        <!--Dashboard <span class="caret"></span>-->
+                    <!--</a>-->
+                    <!--<ul class="dropdown-menu">-->
+                        <!--<li><a th:href="@{/Dashboard/tables}">Tables</a></li>-->
+                        <!--<li><a th:href="@{/Dashboard/charts}">Charts</a></li>-->
+                    <!--</ul>-->
+                <!--</li>-->
 
-                <li><a th:href="@{/Milestones}">Milestones</a></li>
-                <li><a th:href="@{/logout}">Logout</a></li>
+                <!--<li><a th:href="@{/Milestones}">Milestones</a></li>-->
+                <!--<li><a th:href="@{/logout}">Logout</a></li>-->
 
-            </ul>
-        </div><!--/.nav-collapse -->
-    </div>
-</nav>
+            <!--</ul>-->
+        <!--</div>&lt;!&ndash;/.nav-collapse &ndash;&gt;-->
+    <!--</div>-->
+<!--</nav>-->
 
 </body>
 
